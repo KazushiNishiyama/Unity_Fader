@@ -15,7 +15,7 @@ public class Fader : MonoBehaviour
     State state = State.Wait;
     private Image image;
     private Canvas canvas;
-    
+
     private readonly int CANVAS_SORT_ORDER = 1000;
 
     void Awake()
@@ -24,15 +24,15 @@ public class Fader : MonoBehaviour
         canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = CANVAS_SORT_ORDER;
-        
+
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = Vector2.one;
-        
+
         var obj = new GameObject("Image");
         obj.transform.SetParent(transform, false);
         image = obj.AddComponent<Image>();
-        image.color = new Color(0, 0, 0, 255);
+        image.color = new Color(0, 0, 0, 0);
         
     }
 
@@ -40,30 +40,39 @@ public class Fader : MonoBehaviour
     //フェードイン
     public void Fadein(float span)
     {
-        if (state == State.Wait)
-        {
-            state = State.Fade;
-            StartCoroutine("ToTransparency", span);
-        }
+        StartCoroutine("ToTransparency", span);
     }
 
     //フェードアウト
     public void Fadeout(float span)
     {
-        if (state == State.Wait)
-        {
-            state = State.Fade;
-            StartCoroutine("ToBlack", span);
-        }
+        StartCoroutine("ToBlack", span);
     }
-    
+
+    //暗転状態を維持する
+    public void KeepFadeout(float span)
+    {
+        StartCoroutine("StayBlack", span);
+    }
+
+    private IEnumerator StayBlack(float span)
+    {
+        while (state == State.Fade) yield return null;
+
+        state = State.Fade;
+        yield return new WaitForSeconds(span);
+        state = State.Wait;
+    }
+
     private IEnumerator ToBlack(float span)
     {
+        while (state == State.Fade) yield return null;
+        state = State.Fade;
         float deltatime = 0;
         while (deltatime <= span)
         {
             deltatime += Time.deltaTime;
-            image.color = new Color(0, 0, 0, deltatime/span);
+            image.color = new Color(0, 0, 0, Mathf.Lerp(0,1, deltatime / span));
             yield return null;
         }
         state = State.Wait;
@@ -71,15 +80,17 @@ public class Fader : MonoBehaviour
 
     private IEnumerator ToTransparency(float span)
     {
+        while (state == State.Fade) yield return null;
+        state = State.Fade;
         float deltatime = span;
         while (deltatime >= 0)
         {
             deltatime -= Time.deltaTime;
             Debug.Log(deltatime);
-            image.color = new Color(0, 0, 0, deltatime / span);
+            image.color = new Color(0, 0, 0, Mathf.Lerp(0, 1, deltatime / span));
             yield return null;
         }
         state = State.Wait;
     }
-    
+
 }
